@@ -8,9 +8,13 @@ import numpy as np
 import os
 
 from keras.models import Sequential
-from keras.layers import Flatten, Dense
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Cropping2D
 
 from keras.callbacks import TensorBoard, ModelCheckpoint
+from keras.layers import GlobalAveragePooling2D, AveragePooling2D
+
+
+
 '''
 Load training images and their labels/steering measurements
 '''
@@ -37,27 +41,63 @@ for line in lines[1:]: # delete the first line which is the name of the column
     measurement = float(line[3])
     measurements.append(measurement)
 
+#data augmentation
+augmented_images, augmented_measurements = [],[]
+for image, measurement in zip(images,measurements):
+    augmented_images.append(image)
+    augmented_measurements.append(measurement)
+    augmented_images.append(cv2.flip(image,1))
+    augmented_measurements.append(measurement*-1.0)
+
 '''
 Pre-process the training data
 '''
-X_train = np.array(images)
-y_train = np.array(measurements)
-#print(X_train.shape)
+# X_train = np.array(images)
+# y_train = np.array(measurements)
+# #print(X_train.shape)
+
+X_train = np.array(augmented_images)
+y_train = np.array(augmented_measurements)
 
 '''
 Define the Model Architecture
 '''
-
 model = Sequential()
-model.add(Flatten(input_shape=(160, 320, 3)))
+# Normalization
+model.add(Lambda(lambda x: x/255.0, input_shape = (160,320,3)))
+# Crop views (ROI)
+model.add(Cropping2D(cropping=((70,25),(0,0))))
+# NAVIDIA End-to-End CNN
+model.add(Conv2D(24, 5, 5, subsample=(2, 2), border_mode="same"))
+model.add(Activation('relu'))
+model.add(Conv2D(36, 5, 5, subsample=(2, 2), border_mode="same"))
+model.add(Activation('relu'))
+model.add(Conv2D(48, 5, 5, subsample=(2, 2), border_mode="same"))
+model.add(Activation('relu'))
+model.add(Conv2D(64, 3, 3, subsample=(2, 2), border_mode="same"))
+model.add(Activation('relu'))
+model.add(Conv2D(64, 3, 3, subsample=(2, 2), border_mode="same"))
+model.add(Flatten())
+model.add(Activation('relu'))
+model.add(Dense(100))
+model.add(Activation('relu'))
+model.add(Dense(50))
+model.add(Activation('relu'))
+model.add(Dense(10))
+model.add(Activation('relu'))
 model.add(Dense(1))
+model.summary()
 
 '''
 Train the model
 '''
 # Defien tensorboard here
 # todo: change the name when update the architecture of the model
-model_save_path = '1_model'
+#model_save_path = '1_model'
+#model_save_path = '2_model_NAVIDIA'
+#model_save_path = '3_model_NAVIDIA_DA' #data_augmentation
+#model_save_path = '4_model_NAVIDIA_DA_ROI' #ROI
+model_save_path = '5_model_NAVIDIA_DA_ROI_MultiCameras' #MultiCameras
 
 tensorboard_dir = './tensorboard/'+ model_save_path
 if not os.path.exists(tensorboard_dir):

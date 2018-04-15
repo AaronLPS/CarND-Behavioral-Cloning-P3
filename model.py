@@ -29,17 +29,26 @@ with open('../data/driving_log.csv') as csvfile:
 images = []
 measurements = []
 for line in lines[1:]: # delete the first line which is the name of the column
-    source_path= line[0]
-    filename = source_path.split('/')[-1]
-    current_path = '../data/IMG/'+ filename
-    #print(current_path)
-    image = cv2.imread(current_path)
-    image_array = np.array(image)
-    #print(image_array.shape)
-    images.append(image)
-    #print(line[3])
-    measurement = float(line[3])
-    measurements.append(measurement)
+    for i in range(3): # use Multiple Cameras: Center Left Right
+        source_path= line[i]
+        filename = source_path.split('/')[-1]
+        current_path = '../data/IMG/'+ filename
+        #print(current_path)
+        image = cv2.imread(current_path)
+        image_array = np.array(image)
+        #print(image_array.shape)
+        images.append(image)
+        #print(line[3])
+        correction = 0.2 # parameter to tune for Left and Right cameras
+        if i == 0:
+            measurement = float(line[3])
+            measurements.append(measurement)
+        elif i == 1: #Left
+            measurement = float(line[3]) + correction
+            measurements.append(measurement)
+        else: #Right
+            measurement = float(line[3]) - correction
+            measurements.append(measurement)
 
 #data augmentation
 augmented_images, augmented_measurements = [],[]
@@ -130,4 +139,3 @@ model.fit(x=X_train,y= y_train,
 Save the final model for submission
 '''
 model.save('model.h5')
-
